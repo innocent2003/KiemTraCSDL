@@ -21,20 +21,6 @@ public class CSVToElasticsearch {
         this.client = client;
     }
 
-//    public void importCSV(String csvFilePath) throws IOException {
-//        try (FileReader reader = new FileReader(csvFilePath);
-//             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader())) {
-//
-//            for (CSVRecord csvRecord : csvParser) {
-//                IndexRequest indexRequest = new IndexRequest(INDEX_NAME)
-//                        .source(csvRecord.toMap(), XContentType.JSON);
-//
-//                client.index(indexRequest, RequestOptions.DEFAULT);
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
 public void importCSV(String csvFilePath) {
     try (FileReader reader = new FileReader(csvFilePath);
          CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader())) {
@@ -63,7 +49,7 @@ public void importCSV(String csvFilePath) {
         try {
             RestHighLevelClient client = new RestHighLevelClient(RestClient.builder(new HttpHost("localhost", 9200, "http")));
             CSVToElasticsearch importer = new CSVToElasticsearch(client);
-            importer.importCSV("G:\\bigdataPJ\\dataset_sdn.csv"); // Change this to your CSV file path
+            importer.importCSV("G:\\bigdataPJ\\ProjectCode\\dataset_sdn.csv"); // Change this to your CSV file path
             client.close();
         } catch (IOException e) {
             e.printStackTrace();
