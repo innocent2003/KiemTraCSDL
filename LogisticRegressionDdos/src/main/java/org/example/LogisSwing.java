@@ -3,20 +3,23 @@ package org.example;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.ml.feature.StringIndexer;
 import org.apache.spark.ml.feature.VectorAssembler;
-import org.apache.spark.ml.classification.LogisticRegression;
-import org.apache.spark.ml.classification.LogisticRegressionModel;
+import org.apache.spark.ml.classification.LinearSVC; // Change to LinearSVC for SVM
+import org.apache.spark.ml.classification.LinearSVCModel;
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator;
 import org.apache.spark.ml.feature.OneHotEncoder;
 import org.apache.spark.ml.feature.StringIndexerModel;
-import org.apache.spark.ml.linalg.Vector;
-public class LogisticRegressionDemo {
-    public static void main(String[] args) {
 
+import java.util.Collections;
+import java.util.List;
+
+public class LogisSwing {
+    public static void main(String[] args) {
         // Initialize Spark session
         SparkSession spark = SparkSession.builder()
-                .appName("Logistic Regression Example")
+                .appName("SVM Example")
                 .master("local[*]") // Use all available cores
                 .getOrCreate();
 
@@ -47,7 +50,7 @@ public class LogisticRegressionDemo {
 
         // Vector Assembler to combine all features into a single feature vector
         VectorAssembler assembler = new VectorAssembler()
-                .setInputCols(new String[]{"Protocol_OHE", "pktcount", "bytecount", "pktperflow", "tx_bytes", "rx_bytes"}) // Include columns you want as features
+                .setInputCols(new String[]{"Protocol_OHE", "pktcount", "bytecount", "tot_dur", "flows", "packetins", "byteperflow", "tx_bytes", "rx_bytes", "tx_kbps", "rx_kbps", "tot_kbps"}) // Include columns you want as features
                 .setOutputCol("features");
 
         Dataset<Row> finalData = assembler.transform(encodedData)
@@ -58,17 +61,17 @@ public class LogisticRegressionDemo {
         Dataset<Row> trainingData = splitData[0];
         Dataset<Row> testData = splitData[1];
 
-        // Initialize Logistic Regression model
-        LogisticRegression logisticRegression = new LogisticRegression()
+        // Initialize SVM model
+        LinearSVC svm = new LinearSVC()
                 .setLabelCol("label")
                 .setFeaturesCol("features")
                 .setMaxIter(10);
 
         // Train the model
-        LogisticRegressionModel model = logisticRegression.fit(trainingData);
+        LinearSVCModel svmModel = svm.fit(trainingData);
 
         // Make predictions on test data
-        Dataset<Row> predictions = model.transform(testData);
+        Dataset<Row> predictions = svmModel.transform(testData);
 
         // Evaluate the model using Binary Classification Evaluator
         BinaryClassificationEvaluator evaluator = new BinaryClassificationEvaluator()
@@ -83,5 +86,20 @@ public class LogisticRegressionDemo {
 
         // Stop Spark session
         spark.stop();
+    }
+
+    private static Dataset<Row> createInputData(SparkSession spark, String protocol, double pktcount, double bytecount, double totDur, double flows, double packetins, double byteperflow, double txBytes, double rxBytes, double txKbps, double rxKbps, double totKbps) {
+        // Create a DataFrame with the input data
+        String inputData = String.format("%s,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f", protocol, pktcount, bytecount, totDur, flows, packetins, byteperflow, txBytes, rxBytes, txKbps, rxKbps, totKbps);
+        String csvData = "Protocol,pktcount,bytecount,tot_dur,flows,packetins,byteperflow,tx_bytes,rx_bytes,tx_kbps,rx_kbps,tot_kbps\n" + inputData;
+
+        // Use a List to hold the input data
+        List<String> data = Collections.singletonList(csvData);
+
+        // Create a temporary DataFrame from the input data
+        return spark.read()
+                .option("header", "true")
+                .option("inferSchema", "true")
+                .csv(spark.createDataset(data, Encoders.STRING())); // Use Encoders.STRING()
     }
 }

@@ -5,18 +5,18 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.ml.feature.StringIndexer;
 import org.apache.spark.ml.feature.VectorAssembler;
-import org.apache.spark.ml.classification.LogisticRegression;
-import org.apache.spark.ml.classification.LogisticRegressionModel;
+import org.apache.spark.ml.classification.LinearSVC;
+import org.apache.spark.ml.classification.LinearSVCModel;
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator;
 import org.apache.spark.ml.feature.OneHotEncoder;
 import org.apache.spark.ml.feature.StringIndexerModel;
-import org.apache.spark.ml.linalg.Vector;
-public class LogisticRegressionDemo {
+
+public class SVMExample1 {
     public static void main(String[] args) {
 
         // Initialize Spark session
         SparkSession spark = SparkSession.builder()
-                .appName("Logistic Regression Example")
+                .appName("SVM Example")
                 .master("local[*]") // Use all available cores
                 .getOrCreate();
 
@@ -58,14 +58,14 @@ public class LogisticRegressionDemo {
         Dataset<Row> trainingData = splitData[0];
         Dataset<Row> testData = splitData[1];
 
-        // Initialize Logistic Regression model
-        LogisticRegression logisticRegression = new LogisticRegression()
+        // Initialize SVM model
+        LinearSVC svm = new LinearSVC()
                 .setLabelCol("label")
                 .setFeaturesCol("features")
                 .setMaxIter(10);
 
         // Train the model
-        LogisticRegressionModel model = logisticRegression.fit(trainingData);
+        LinearSVCModel model = svm.fit(trainingData);
 
         // Make predictions on test data
         Dataset<Row> predictions = model.transform(testData);
@@ -73,7 +73,7 @@ public class LogisticRegressionDemo {
         // Evaluate the model using Binary Classification Evaluator
         BinaryClassificationEvaluator evaluator = new BinaryClassificationEvaluator()
                 .setLabelCol("label")
-                .setRawPredictionCol("rawPrediction");
+                .setRawPredictionCol("prediction"); // Use 'prediction' for evaluation
 
         double accuracy = evaluator.evaluate(predictions);
         System.out.println("Model accuracy: " + accuracy);
