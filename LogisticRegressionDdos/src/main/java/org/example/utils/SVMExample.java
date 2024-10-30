@@ -1,22 +1,22 @@
-package org.example;
+package org.example.utils;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.ml.feature.StringIndexer;
 import org.apache.spark.ml.feature.VectorAssembler;
-import org.apache.spark.ml.classification.LogisticRegression;
-import org.apache.spark.ml.classification.LogisticRegressionModel;
+import org.apache.spark.ml.classification.LinearSVC; // Import LinearSVC for SVM
+import org.apache.spark.ml.classification.LinearSVCModel;
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator;
 import org.apache.spark.ml.feature.OneHotEncoder;
 import org.apache.spark.ml.feature.StringIndexerModel;
-import org.apache.spark.ml.linalg.Vector;
-public class LogisticRegressionDemo {
+
+public class SVMExample {
     public static void main(String[] args) {
 
         // Initialize Spark session
         SparkSession spark = SparkSession.builder()
-                .appName("Logistic Regression Example")
+                .appName("SVM Example")
                 .master("local[*]") // Use all available cores
                 .getOrCreate();
 
@@ -31,55 +31,64 @@ public class LogisticRegressionDemo {
         System.out.println("Original DataFrame:");
         data.show();
 
+        // Check if 'label' is numeric and convert if necessary
+        StringIndexer labelIndexer = new StringIndexer()
+                .setInputCol("label") // Assuming 'label' column exists in your data
+                .setOutputCol("indexedLabel");
+
+        StringIndexerModel labelIndexerModel = labelIndexer.fit(data);
+        Dataset<Row> indexedData = labelIndexerModel.transform(data);
+
         // Index and encode categorical columns (e.g., "Protocol")
         StringIndexer indexer = new StringIndexer()
                 .setInputCol("Protocol")
                 .setOutputCol("Protocol_Index");
 
-        StringIndexerModel indexerModel = indexer.fit(data);
-        Dataset<Row> indexedData = indexerModel.transform(data);
+        StringIndexerModel indexerModel = indexer.fit(indexedData);
+        Dataset<Row> indexedProtocolData = indexerModel.transform(indexedData);
 
         OneHotEncoder encoder = new OneHotEncoder()
                 .setInputCol("Protocol_Index")
                 .setOutputCol("Protocol_OHE");
 
-        Dataset<Row> encodedData = encoder.fit(indexedData).transform(indexedData);
+        Dataset<Row> encodedData = encoder.fit(indexedProtocolData).transform(indexedProtocolData);
 
         // Vector Assembler to combine all features into a single feature vector
         VectorAssembler assembler = new VectorAssembler()
-                .setInputCols(new String[]{"Protocol_OHE", "pktcount", "bytecount", "pktperflow", "tx_bytes", "rx_bytes"}) // Include columns you want as features
+                .setInputCols(new String[]{"Protocol_OHE", "pktcount", "bytecount", "flows", "tx_bytes", "rx_bytes"}) // Make sure all columns are correct
                 .setOutputCol("features");
 
         Dataset<Row> finalData = assembler.transform(encodedData)
-                .withColumnRenamed("label", "label"); // Rename label column if necessary
+                .select("features", "indexedLabel"); // Select features and the new indexed label
 
         // Split the data into training and test sets
         Dataset<Row>[] splitData = finalData.randomSplit(new double[]{0.7, 0.3}, 12345);
         Dataset<Row> trainingData = splitData[0];
         Dataset<Row> testData = splitData[1];
 
-        // Initialize Logistic Regression model
-        LogisticRegression logisticRegression = new LogisticRegression()
-                .setLabelCol("label")
-                .setFeaturesCol("features")
-                .setMaxIter(10);
+        // Initialize SVM model
+        LinearSVC svm = new LinearSVC()
+                .setLabelCol("indexedLabel") // Set the indexed label column
+                .setFeaturesCol("features") // Set the features column
+                .setMaxIter(10) // Maximum number of iterations
+                .setRegParam(0.1); // Regularization parameter
 
         // Train the model
-        LogisticRegressionModel model = logisticRegression.fit(trainingData);
+        LinearSVCModel model = svm.fit(trainingData);
 
         // Make predictions on test data
         Dataset<Row> predictions = model.transform(testData);
 
         // Evaluate the model using Binary Classification Evaluator
         BinaryClassificationEvaluator evaluator = new BinaryClassificationEvaluator()
-                .setLabelCol("label")
+                .setLabelCol("indexedLabel") // Use the indexed label for evaluation
                 .setRawPredictionCol("rawPrediction");
 
         double accuracy = evaluator.evaluate(predictions);
         System.out.println("Model accuracy: " + accuracy);
 
         // Display prediction results
-        predictions.select("features", "label", "prediction", "probability").show();
+        predictions.select("features", "indexedLabel", "prediction").show(); // Removed probability column
 
         // Stop Spark session
         spark.stop();

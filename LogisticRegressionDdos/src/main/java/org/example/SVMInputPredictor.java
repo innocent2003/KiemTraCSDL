@@ -6,23 +6,29 @@ import org.apache.spark.ml.feature.OneHotEncoder;
 import org.apache.spark.ml.feature.StringIndexer;
 import org.apache.spark.ml.feature.VectorAssembler;
 import org.apache.spark.ml.linalg.Vector;
+import org.apache.spark.ml.linalg.VectorUDT;
 import org.apache.spark.ml.linalg.Vectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 import java.io.IOException;
 
 public class SVMInputPredictor extends JFrame {
 
     private JTextField protocolField, pktcountField, bytecountField, dur_nsecField, tot_durField, flowsField,
-            packetinsField, byteperflowField, tx_bytesField, rx_bytesField, tx_kbpsField, rx_kbpsField, tot_kbpsField;
+            packetinsField, byteperflowField, tx_bytesField, rx_bytesField, tx_kbpsField, rx_kbpsField, tot_kbpsField, switch_Field;
     private JLabel predictionLabel;
     private LinearSVCModel model;
     private SparkSession spark;
@@ -87,6 +93,10 @@ public class SVMInputPredictor extends JFrame {
         tot_kbpsField = new JTextField();
         add(tot_kbpsField);
 
+        add(new JLabel("Switchs:"));
+        switch_Field = new JTextField();
+        add(switch_Field);
+
         // Add a button to make predictions
         JButton predictButton = new JButton("Predict");
         predictButton.addActionListener(new ActionListener() {
@@ -122,21 +132,32 @@ public class SVMInputPredictor extends JFrame {
             double tx_kbps = Double.parseDouble(tx_kbpsField.getText());
             double rx_kbps = Double.parseDouble(rx_kbpsField.getText());
             double tot_kbps = Double.parseDouble(tot_kbpsField.getText());
+            double switch1 = Double.parseDouble(switch_Field.getText());
 
             // Assemble feature vector
-            Vector features = Vectors.dense(protocol, pktcount, bytecount, dur_nsec, tot_dur, flows, packetins, byteperflow, tx_bytes, rx_bytes, tx_kbps, rx_kbps, tot_kbps);
+            Vector features = Vectors.dense(protocol, pktcount, bytecount, dur_nsec, tot_dur, flows, packetins, byteperflow, tx_bytes, rx_bytes, tx_kbps, rx_kbps, tot_kbps,switch1);
+
+            // Create a DataFrame with the feature vector
+            Dataset<Row> inputDf = spark.createDataFrame(
+                    java.util.Collections.singletonList(RowFactory.create(features)),
+                    new StructType(new StructField[]{
+                            new StructField("features", new VectorUDT(), false, Metadata.empty())
+                    })
+            );
 
             // Make prediction using the model
-            double prediction = model.predict(features);
+            Row result = model.transform(inputDf).select("prediction").first();
+            double prediction = result.getDouble(0);
 
             // Display the result
             predictionLabel.setText("Prediction: " + prediction);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Invalid input! Please enter valid numbers.");
+            ex.printStackTrace();
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         // Initialize Spark session
         SparkSession spark = SparkSession.builder()
                 .appName("SVM Example")
@@ -179,7 +200,8 @@ public class SVMInputPredictor extends JFrame {
                 .withColumn("tx_kbps", functions.col("tx_kbps").cast(DataTypes.DoubleType))
                 .withColumn("rx_kbps", functions.col("rx_kbps").cast(DataTypes.DoubleType))
                 .withColumn("tot_kbps", functions.col("tot_kbps").cast(DataTypes.DoubleType))
-                .withColumnRenamed("label", "label");
+                .withColumn("switch",functions.col("switch").cast(DataTypes.DoubleType))
+                .withColumn("label", functions.col("label").cast(DataTypes.DoubleType));
 
         VectorAssembler assembler = new VectorAssembler()
                 .setInputCols(new String[]{"Protocol_OHE", "pktcount", "bytecount", "dur_nsec", "tot_dur",
@@ -187,27 +209,24 @@ public class SVMInputPredictor extends JFrame {
                         "tx_kbps", "rx_kbps", "tot_kbps"})
                 .setOutputCol("features");
 
-        Dataset<Row> assembledData = assembler.transform(finalData);
+        Dataset<Row> assembledData = assembler.transform(finalData).select("features", "label");
 
-        // Split the data
-        Dataset<Row>[] splitData = assembledData.randomSplit(new double[]{0.7, 0.3}, 12345);
-        Dataset<Row> trainingData = splitData[0];
+        // Model training
+        LinearSVC lsvc = new LinearSVC()
+                .setMaxIter(10)
+                .setRegParam(0.1);
 
+        String modelPath = "G:\\bigdataPJ\\ProjectCode\\svm_model";
         LinearSVCModel model;
-        String modelPath = "G:\\bigdataPJ\\ProjectCode\\svmModel";
 
-        try {
+        if (new File(modelPath).exists()) {
             model = LinearSVCModel.load(modelPath);
-        } catch (Exception e) {
-            LinearSVC svm = new LinearSVC()
-                    .setLabelCol("label")
-                    .setFeaturesCol("features")
-                    .setMaxIter(10);
-            model = svm.fit(trainingData);
-//            model.save(modelPath);
+        } else {
+            model = lsvc.fit(assembledData);
+            model.save(modelPath);
         }
 
-        // Create the Swing application
-        new SVMInputPredictor(model, spark);
+        // Launch GUI
+        SwingUtilities.invokeLater(() -> new SVMInputPredictor(model, spark));
     }
 }

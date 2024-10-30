@@ -1,4 +1,4 @@
-package org.example;
+package org.example.utils;
 
 import org.apache.spark.ml.feature.StringIndexerModel;
 import org.apache.spark.sql.Dataset;
