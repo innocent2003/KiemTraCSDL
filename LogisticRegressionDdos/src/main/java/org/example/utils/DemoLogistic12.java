@@ -1,4 +1,4 @@
-package org.example;
+package org.example.utils;
 
 
 
@@ -10,13 +10,9 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.ml.feature.VectorAssembler;
-import org.apache.spark.ml.classification.LogisticRegression;
-import org.apache.spark.ml.classification.LogisticRegressionModel;
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
-
-import static org.apache.spark.sql.functions.col;
 
 public class DemoLogistic12 {
 

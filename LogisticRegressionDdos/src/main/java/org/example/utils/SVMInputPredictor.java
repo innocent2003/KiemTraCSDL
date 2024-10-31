@@ -1,4 +1,4 @@
-package org.example;
+package org.example.utils;
 
 import org.apache.spark.ml.classification.LinearSVC;
 import org.apache.spark.ml.classification.LinearSVCModel;

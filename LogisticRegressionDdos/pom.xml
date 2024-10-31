@@ -44,7 +44,11 @@
             <artifactId>elasticsearch-rest-high-level-client</artifactId>
             <version>6.8.0</version> <!-- Use the version compatible with your Elasticsearch -->
         </dependency>
-
+        <dependency>
+            <groupId>org.elasticsearch</groupId>
+            <artifactId>elasticsearch-spark-20_2.10</artifactId> <!-- For Spark 2.x -->
+            <version>6.8.0</version> <!-- Elasticsearch 6.x version -->
+        </dependency>
 
 
     </dependencies>
