@@ -12,6 +12,7 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <spark.version>3.5.3 </spark.version>
     </properties>
     <dependencies>
         <dependency>
@@ -49,6 +50,11 @@
             <artifactId>elasticsearch-spark-20_2.10</artifactId> <!-- For Spark 2.x -->
             <version>6.8.0</version> <!-- Elasticsearch 6.x version -->
         </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.scala-lang</groupId>-->
+<!--            <artifactId>scala-library</artifactId>-->
+<!--            <version>2.11.12</version> &lt;!&ndash; Phiên bản Scala tương ứng &ndash;&gt;-->
+<!--        </dependency>-->
 
 
     </dependencies>

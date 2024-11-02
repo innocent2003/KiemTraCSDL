@@ -213,10 +213,10 @@ public class SVMInputPredictor extends JFrame {
 
         // Model training
         LinearSVC lsvc = new LinearSVC()
-                .setMaxIter(10)
+                .setMaxIter(1000)
                 .setRegParam(0.1);
 
-        String modelPath = "G:\\bigdataPJ\\ProjectCode\\svm_model";
+        String modelPath = "G:\\bigdataPJ\\ProjectCode\\svm_model1";
         LinearSVCModel model;
 
         if (new File(modelPath).exists()) {

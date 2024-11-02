@@ -167,7 +167,7 @@ public class DemoSVMPredictionView extends JFrame {
                 .getOrCreate();
 
         // Load data from Elasticsearch
-        String esIndex = "sdn"; // replace with your actual index name
+        String esIndex = "sdn3"; // replace with your actual index name
         Dataset<Row> data;
 
         try {

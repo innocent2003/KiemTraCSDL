@@ -62,7 +62,7 @@ public class LogisticRegressionDemo {
         LogisticRegression logisticRegression = new LogisticRegression()
                 .setLabelCol("label")
                 .setFeaturesCol("features")
-                .setMaxIter(10);
+                .setMaxIter(10000);
 
         // Train the model
         LogisticRegressionModel model = logisticRegression.fit(trainingData);
